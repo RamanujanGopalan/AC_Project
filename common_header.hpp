@@ -1,4 +1,4 @@
-void aes_cpu_ecrypt(uint8_t *input,uint8_t *output, uint8_t *keys,int blocks);
+void aes_cpu_encrypt(uint8_t *input,uint8_t *output, uint8_t *keys,int blocks);
 uint8_t* aes_cpu_get_key();
 
 void des_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t key, int blocks);

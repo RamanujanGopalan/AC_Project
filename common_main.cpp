@@ -18,8 +18,8 @@ int main(){
     uint8_t *h_cipher = (uint8_t*)malloc(size);
 
     // ===== ENCRYTPION =====
-    // auto key = aes_cpu_get_key();
-    // aes_cpu_ecrypt(h_plain,h_cipher,key,blocks);
+    auto key = aes_cpu_get_key();
+    aes_cpu_encrypt(h_plain,h_cipher,key,blocks);
 
     // auto key = des_cpu_get_key();
     // des_cpu_encrypt(h_plain, h_cipher, key, blocks);

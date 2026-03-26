@@ -131,7 +131,7 @@ uint8_t* aes_cpu_get_key(){
     for(int i=0;i<16;i++)
         key[i] = i;
 
-    uint8_t roundKeys[176];
+    uint8_t *roundKeys = (uint8_t*)malloc(176);
 
     keyExpansion(key, roundKeys);
     return roundKeys;

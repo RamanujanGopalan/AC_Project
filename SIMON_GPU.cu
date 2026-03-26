@@ -57,7 +57,6 @@ static inline uint64_t ROR_host(uint64_t x, long long int r) {
 }
 
 void generate_keys(uint64_t key[2], uint64_t round_keys[ROUNDS]) {
-
     uint64_t k[ROUNDS];
     k[0] = key[0];
     k[1] = key[1];

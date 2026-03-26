@@ -188,7 +188,7 @@ uint8_t* kalyna_cpu_get_key(){
     for(int i=0;i<16;i++)
         key[i] = i;
 
-    uint8_t roundKeys[(ROUNDS+1)*16];
+    uint8_t *roundKeys = (uint8_t*)malloc((ROUNDS+1)*16);
 
     keyExpansion(key, roundKeys);
     return roundKeys;

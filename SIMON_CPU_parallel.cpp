@@ -78,7 +78,7 @@ uint64_t* simon_cpu_get_key(){
         0x0f0e0d0c0b0a0908,
         0x0706050403020100
     };
-    uint64_t round_keys[ROUNDS];
+    uint64_t *round_keys = (uint64_t*)malloc(ROUNDS*sizeof(uint64_t));
     generate_keys(key, round_keys);
-    return key;
+    return round_keys;
 }
