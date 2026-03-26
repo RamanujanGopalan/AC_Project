@@ -154,7 +154,7 @@ void keyExpansion(uint8_t *key, uint8_t *roundKeys)
 }
 
 // --- Encryption (OpenMP parallel) ---
-void kalyna_encrypt_cpu(uint8_t *in, uint8_t *out, uint8_t *roundKeys, int blocks)
+void kalyna_cpu_encrypt(uint8_t *in, uint8_t *out, uint8_t *keys, int blocks)
 {
     #pragma omp parallel for
     for(int id=0; id<blocks; id++)
@@ -164,41 +164,26 @@ void kalyna_encrypt_cpu(uint8_t *in, uint8_t *out, uint8_t *roundKeys, int block
         for(int i=0;i<16;i++)
             state[i] = in[id*16+i];
 
-        addRoundKey(state, roundKeys);
+        addRoundKey(state, keys);
 
         for(int r=1;r<ROUNDS;r++)
         {
             subBytes(state);
             shiftRows(state);
             mixColumns(state);
-            addRoundKey(state, roundKeys + r*16);
+            addRoundKey(state, keys + r*16);
         }
 
         subBytes(state);
         shiftRows(state);
-        addRoundKey(state, roundKeys + ROUNDS*16);
+        addRoundKey(state, keys + ROUNDS*16);
 
         for(int i=0;i<16;i++)
             out[id*16+i] = state[i];
     }
 }
 
-// --- MAIN ---
-int main(){
-    struct timespec start, end;
-    
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
-    int blocks = 100*1024*1024;
-    int size = blocks*16;
-
-    uint8_t *h_plain = (uint8_t*)malloc(size);
-    uint8_t *h_cipher = (uint8_t*)malloc(size);
-
-    for(int i=0;i<size;i++)
-        h_plain[i] = i%256;
-
-    // ORIGINAL KEY (16 bytes)
+uint8_t* kalyna_cpu_get_key(){
     uint8_t key[16];
     for(int i=0;i<16;i++)
         key[i] = i;
@@ -206,22 +191,5 @@ int main(){
     uint8_t roundKeys[(ROUNDS+1)*16];
 
     keyExpansion(key, roundKeys);
-
-    kalyna_encrypt_cpu(h_plain, h_cipher, roundKeys, blocks);
-
-    printf("First block ciphertext:\n");
-    printf("RESULT\n");
-    for(int i=0;i<16;i++) printf("%02x ",h_cipher[i]);
-
-    printf("\n");
-
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;  
-    printf("==================================================\n");
-    printf("Execution Time: %f\n", elapsed);
-
-    free(h_plain);
-    free(h_cipher);
-
-    return 0;
+    return roundKeys;
 }

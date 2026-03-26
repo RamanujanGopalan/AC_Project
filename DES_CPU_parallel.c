@@ -188,12 +188,12 @@ uint64_t des_encrypt_block(uint64_t block, uint64_t round_keys[]) {
 }
 
 // Parallel encryption
-void des_encrypt_cpu(uint8_t *input, uint8_t *output, int nblocks, uint64_t key) {
+void des_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t key, int blocks) {
     uint64_t round_keys[ROUNDS];
     generate_keys(key, round_keys);
 
     #pragma omp parallel for
-    for (int i = 0; i < nblocks; i++) {
+    for (int i = 0; i < blocks; i++) {
         uint64_t block;
         memcpy(&block, input + i*8, 8);
 
@@ -203,37 +203,7 @@ void des_encrypt_cpu(uint8_t *input, uint8_t *output, int nblocks, uint64_t key)
     }
 }
 
-int main(){
-    struct timespec start, end;
-    
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
-    int blocks = 100*1024*1024;
-    int size = blocks*16;
-
-    uint8_t *h_plain = (uint8_t*)malloc(size);
-    uint8_t *h_cipher = (uint8_t*)malloc(size);
-
-    for(int i=0;i<size;i++)
-        h_plain[i] = i%256;
-
+uint64_t des_cpu_get_key(){
     uint64_t key = 0x133457799BBCDFF1;
-
-    des_encrypt_cpu(h_plain, h_cipher, blocks, key);
-
-    printf("First block ciphertext:\n");
-    printf("RESULT\n");
-    for(int i=0;i<16;i++) printf("%02x ",h_cipher[i]);
-
-    printf("\n");
-
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;  
-    printf("==================================================\n");
-    printf("Execution Time: %f\n", elapsed);
-
-    free(h_plain);
-    free(h_cipher);
-
-    return 0;
+    return key;
 }

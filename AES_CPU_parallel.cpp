@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <omp.h>
 #include <time.h>
+#include <common_header.hpp>
 
 #define AES_BLOCK_SIZE 16
 #define AES_ROUNDS 10
@@ -106,7 +107,7 @@ void addRoundKey(uint8_t *state,uint8_t *roundKey){
     for(int i=0;i<16;i++) state[i] ^= roundKey[i];
 }
 
-void aes_encrypt_cpu(uint8_t *input,uint8_t *output, uint8_t *roundKeys,int blocks){
+void aes_cpu_encrypt(uint8_t *input,uint8_t *output, uint8_t *roundKeys,int blocks){
     #pragma omp parallel for
     for(int id=0; id<blocks; id++){
         uint8_t state[16];
@@ -125,45 +126,56 @@ void aes_encrypt_cpu(uint8_t *input,uint8_t *output, uint8_t *roundKeys,int bloc
     }
 }
 
-int main(){
-    struct timespec start, end;
-    
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
-    int blocks = 100*1024*1024;
-    int size = blocks*16;
-
-    uint8_t *h_plain = (uint8_t*)malloc(size);
-    uint8_t *h_cipher = (uint8_t*)malloc(size);
-
-    for(int i=0;i<size;i++)
-        h_plain[i] = i%256;
-
-    // ORIGINAL KEY (16 bytes)
+uint8_t* aes_cpu_get_key(){
     uint8_t key[16];
     for(int i=0;i<16;i++)
         key[i] = i;
 
     uint8_t roundKeys[176];
 
-    // NEW: generate round keys
     keyExpansion(key, roundKeys);
-
-    aes_encrypt_cpu(h_plain,h_cipher,roundKeys,blocks);
-
-    printf("First block ciphertext:\n");
-    printf("RESULT\n");
-    for(int i=0;i<16;i++) printf("%02x ",h_cipher[i]);
-
-    printf("\n");
-
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;  
-    printf("==================================================\n");
-    printf("Execution Time: %f\n", elapsed);
-
-    free(h_plain);
-    free(h_cipher);
-
-    return 0;
+    return roundKeys;
 }
+
+// int main(){
+//     struct timespec start, end;
+    
+//     clock_gettime(CLOCK_MONOTONIC, &start);
+
+//     int blocks = 100*1024*1024;
+//     int size = blocks*16;
+
+//     uint8_t *h_plain = (uint8_t*)malloc(size);
+//     uint8_t *h_cipher = (uint8_t*)malloc(size);
+
+//     for(int i=0;i<size;i++)
+//         h_plain[i] = i%256;
+
+//     // ORIGINAL KEY (16 bytes)
+//     uint8_t key[16];
+//     for(int i=0;i<16;i++)
+//         key[i] = i;
+
+//     uint8_t roundKeys[176];
+
+//     // NEW: generate round keys
+//     keyExpansion(key, roundKeys);
+
+//     aes_encrypt_cpu(h_plain,h_cipher,roundKeys,blocks);
+
+//     printf("First block ciphertext:\n");
+//     printf("RESULT\n");
+//     for(int i=0;i<16;i++) printf("%02x ",h_cipher[i]);
+
+//     printf("\n");
+
+//     clock_gettime(CLOCK_MONOTONIC, &end);
+//     double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;  
+//     printf("==================================================\n");
+//     printf("Execution Time: %f\n", elapsed);
+
+//     free(h_plain);
+//     free(h_cipher);
+
+//     return 0;
+// }
