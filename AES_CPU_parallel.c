@@ -130,7 +130,7 @@ int main(){
     
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    int blocks = 1024*1024;
+    int blocks = 100*1024*1024;
     int size = blocks*16;
 
     uint8_t *h_plain = (uint8_t*)malloc(size);
