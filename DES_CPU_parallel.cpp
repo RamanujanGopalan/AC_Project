@@ -4,6 +4,7 @@
 #include <omp.h>
 #include <time.h>
 #include <stdlib.h>
+#include <common_header.hpp>
 
 #define BLOCK_SIZE 8
 #define ROUNDS 16
@@ -188,7 +189,7 @@ uint64_t des_encrypt_block(uint64_t block, uint64_t round_keys[]) {
 }
 
 // Parallel encryption
-void des_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t key, int blocks) {
+void des_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t key, size_t blocks) {
     uint64_t round_keys[ROUNDS];
     generate_keys(key, round_keys);
 
@@ -198,6 +199,20 @@ void des_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t key, int blocks) 
         memcpy(&block, input + i*8, 8);
 
         uint64_t enc = des_encrypt_block(block, round_keys);
+
+        memcpy(output + i*8, &enc, 8);
+    }
+}
+
+void des_cpu_encrypt_ctr(uint8_t *output, uint64_t key, size_t blocks, uint64_t ctr){
+    uint64_t round_keys[ROUNDS];
+    generate_keys(key, round_keys);
+
+    #pragma omp parallel for
+    for (size_t i = 0; i < blocks; i++) {
+        uint64_t counter_block = ctr + i;
+
+        uint64_t enc = des_encrypt_block(counter_block, round_keys);
 
         memcpy(output + i*8, &enc, 8);
     }

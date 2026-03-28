@@ -107,7 +107,7 @@ void addRoundKey(uint8_t *state,uint8_t *roundKey){
     for(int i=0;i<16;i++) state[i] ^= roundKey[i];
 }
 
-void aes_cpu_encrypt(uint8_t *input,uint8_t *output, uint8_t *roundKeys,int blocks){
+void aes_cpu_encrypt(uint8_t *input,uint8_t *output, uint8_t *roundKeys, size_t blocks){
     #pragma omp parallel for
     for(int id=0; id<blocks; id++){
         uint8_t state[16];
@@ -123,6 +123,34 @@ void aes_cpu_encrypt(uint8_t *input,uint8_t *output, uint8_t *roundKeys,int bloc
         shiftRows(state);
         addRoundKey(state,roundKeys + AES_ROUNDS*16);
         for(int i=0;i<16;i++) output[id*16+i] = state[i];
+    }
+}
+
+void aes_cpu_encrypt_ctr(uint8_t *output, uint8_t *roundKeys, size_t blocks, uint64_t ctr){
+    #pragma omp parallel for
+    for(size_t id = 0; id < blocks; id++){
+        uint8_t state[16];
+        // ===== Construct counter block =====
+        uint64_t counter = ctr + id;
+        // Fill 128-bit state (simple layout: lower 64 bits used)
+        for(int i = 0; i < 8; i++)
+            state[i] = (counter >> (8*i)) & 0xFF;
+        for(int i = 8; i < 16; i++)
+            state[i] = 0;  // remaining bytes zero
+        // ===== AES ENCRYPT =====
+        addRoundKey(state, roundKeys);
+        for(int round = 1; round < AES_ROUNDS; round++){
+            subBytes(state);
+            shiftRows(state);
+            mixColumns(state);
+            addRoundKey(state, roundKeys + round*16);
+        }
+        subBytes(state);
+        shiftRows(state);
+        addRoundKey(state, roundKeys + AES_ROUNDS*16);
+        // ===== Output keystream =====
+        for(int i = 0; i < 16; i++)
+            output[id*16 + i] = state[i];
     }
 }
 

@@ -4,6 +4,7 @@
 #include <omp.h>
 #include <time.h>
 #include <stdlib.h>
+#include <common_header.hpp>
 
 #define ROUNDS 68
 #define BLOCK_SIZE 16  // 128-bit block
@@ -63,12 +64,32 @@ void simon_encrypt_block(uint64_t *block, uint64_t round_keys[]) {
 }
 
 // Parallel encryption
-void simon_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t* keys, int blocks) {
+void simon_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t* keys, size_t blocks) {
     #pragma omp parallel for
     for (int i = 0; i < blocks; i++) {
         uint64_t block[2];
         memcpy(block, input + i*BLOCK_SIZE, BLOCK_SIZE);
         simon_encrypt_block(block, keys);
+        memcpy(output + i*BLOCK_SIZE, block, BLOCK_SIZE);
+    }
+}
+
+void simon_cpu_encrypt_ctr(uint8_t *output, uint64_t *keys, size_t blocks, uint64_t ctr){
+    #pragma omp parallel for
+    for (size_t i = 0; i < blocks; i++) {
+        uint64_t block[2];
+
+        // ===== Construct counter block =====
+        uint64_t counter = ctr + i;
+
+        // 128-bit block: [counter | 0]
+        block[0] = counter;
+        block[1] = 0;
+
+        // ===== SIMON ENCRYPT =====
+        simon_encrypt_block(block, keys);
+
+        // ===== OUTPUT KEYSTREAM =====
         memcpy(output + i*BLOCK_SIZE, block, BLOCK_SIZE);
     }
 }

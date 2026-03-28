@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <omp.h>
 #include <time.h>
+#include <common_header.hpp>
 
 #define BLOCK_SIZE 16
 #define ROUNDS 10
@@ -154,7 +155,7 @@ void keyExpansion(uint8_t *key, uint8_t *roundKeys)
 }
 
 // --- Encryption (OpenMP parallel) ---
-void kalyna_cpu_encrypt(uint8_t *in, uint8_t *out, uint8_t *keys, int blocks)
+void kalyna_cpu_encrypt(uint8_t *in, uint8_t *out, uint8_t *keys, size_t blocks)
 {
     #pragma omp parallel for
     for(int id=0; id<blocks; id++)
@@ -180,6 +181,44 @@ void kalyna_cpu_encrypt(uint8_t *in, uint8_t *out, uint8_t *keys, int blocks)
 
         for(int i=0;i<16;i++)
             out[id*16+i] = state[i];
+    }
+}
+
+void kalyna_cpu_encrypt_ctr(uint8_t *out, uint8_t *keys, size_t blocks, uint64_t ctr){
+    #pragma omp parallel for
+    for(size_t id = 0; id < blocks; id++)
+    {
+        uint8_t state[16];
+
+        // ===== Construct counter block =====
+        uint64_t counter = ctr + id;
+
+        // lower 64 bits = counter
+        for(int i = 0; i < 8; i++)
+            state[i] = (counter >> (8*i)) & 0xFF;
+
+        // upper 64 bits = 0
+        for(int i = 8; i < 16; i++)
+            state[i] = 0;
+
+        // ===== KALYNA ENCRYPT =====
+        addRoundKey(state, keys);
+
+        for(int r = 1; r < ROUNDS; r++)
+        {
+            subBytes(state);
+            shiftRows(state);
+            mixColumns(state);
+            addRoundKey(state, keys + r*16);
+        }
+
+        subBytes(state);
+        shiftRows(state);
+        addRoundKey(state, keys + ROUNDS*16);
+
+        // ===== OUTPUT KEYSTREAM =====
+        for(int i = 0; i < 16; i++)
+            out[id*16 + i] = state[i];
     }
 }
 
