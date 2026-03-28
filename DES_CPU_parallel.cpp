@@ -1,224 +1,229 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <omp.h>
-#include <time.h>
-#include <stdlib.h>
 #include <common_header.hpp>
 
-#define BLOCK_SIZE 8
-#define ROUNDS 16
+#include <cstdint>
+#include <cstring>
+#include <omp.h>
 
-// Initial Permutation (IP)
+namespace {
+
+constexpr size_t FRAMEWORK_BLOCK_SIZE = 16;
+constexpr size_t DES_BLOCK_SIZE = 8;
+constexpr int DES_ROUNDS = 16;
+
 static const int IP[64] = {
-58,50,42,34,26,18,10,2,
-60,52,44,36,28,20,12,4,
-62,54,46,38,30,22,14,6,
-64,56,48,40,32,24,16,8,
-57,49,41,33,25,17,9,1,
-59,51,43,35,27,19,11,3,
-61,53,45,37,29,21,13,5,
-63,55,47,39,31,23,15,7};
+    58, 50, 42, 34, 26, 18, 10, 2,
+    60, 52, 44, 36, 28, 20, 12, 4,
+    62, 54, 46, 38, 30, 22, 14, 6,
+    64, 56, 48, 40, 32, 24, 16, 8,
+    57, 49, 41, 33, 25, 17, 9, 1,
+    59, 51, 43, 35, 27, 19, 11, 3,
+    61, 53, 45, 37, 29, 21, 13, 5,
+    63, 55, 47, 39, 31, 23, 15, 7
+};
 
-// Final Permutation (FP)
 static const int FP[64] = {
-40,8,48,16,56,24,64,32,
-39,7,47,15,55,23,63,31,
-38,6,46,14,54,22,62,30,
-37,5,45,13,53,21,61,29,
-36,4,44,12,52,20,60,28,
-35,3,43,11,51,19,59,27,
-34,2,42,10,50,18,58,26,
-33,1,41,9,49,17,57,25};
+    40, 8, 48, 16, 56, 24, 64, 32,
+    39, 7, 47, 15, 55, 23, 63, 31,
+    38, 6, 46, 14, 54, 22, 62, 30,
+    37, 5, 45, 13, 53, 21, 61, 29,
+    36, 4, 44, 12, 52, 20, 60, 28,
+    35, 3, 43, 11, 51, 19, 59, 27,
+    34, 2, 42, 10, 50, 18, 58, 26,
+    33, 1, 41, 9, 49, 17, 57, 25
+};
 
-// Expansion table
 static const int E[48] = {
-32,1,2,3,4,5,4,5,6,7,8,9,
-8,9,10,11,12,13,12,13,14,15,16,17,
-16,17,18,19,20,21,20,21,22,23,24,25,
-24,25,26,27,28,29,28,29,30,31,32,1};
+    32, 1, 2, 3, 4, 5, 4, 5, 6, 7, 8, 9,
+    8, 9, 10, 11, 12, 13, 12, 13, 14, 15, 16, 17,
+    16, 17, 18, 19, 20, 21, 20, 21, 22, 23, 24, 25,
+    24, 25, 26, 27, 28, 29, 28, 29, 30, 31, 32, 1
+};
 
-// Permutation P
 static const int P[32] = {
-16,7,20,21,29,12,28,17,
-1,15,23,26,5,18,31,10,
-2,8,24,14,32,27,3,9,
-19,13,30,6,22,11,4,25};
+    16, 7, 20, 21, 29, 12, 28, 17,
+    1, 15, 23, 26, 5, 18, 31, 10,
+    2, 8, 24, 14, 32, 27, 3, 9,
+    19, 13, 30, 6, 22, 11, 4, 25
+};
 
-// S-boxes (only S1 shown fully, rest compact for brevity)
 static const int S[8][4][16] = {
-{
-{14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7},
-{0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8},
-{4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0},
-{15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13}
-},
-{
-{15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10},
-{3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5},
-{0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15},
-{13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9}
-},
-{
-{10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8},
-{13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1},
-{13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7},
-{1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12}
-},
-{
-{7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15},
-{13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9},
-{10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4},
-{3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14}
-},
-{
-{2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9},
-{14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6},
-{4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14},
-{11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3}
-},
-{
-{12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11},
-{10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8},
-{9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6},
-{4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13}
-},
-{
-{4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1},
-{13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6},
-{1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2},
-{6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12}
-},
-{
-{13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7},
-{1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2},
-{7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8},
-{2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11}
-}
+    {
+        {14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7},
+        {0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8},
+        {4, 1, 14, 8, 13, 6, 2, 11, 15, 12, 9, 7, 3, 10, 5, 0},
+        {15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13}
+    },
+    {
+        {15, 1, 8, 14, 6, 11, 3, 4, 9, 7, 2, 13, 12, 0, 5, 10},
+        {3, 13, 4, 7, 15, 2, 8, 14, 12, 0, 1, 10, 6, 9, 11, 5},
+        {0, 14, 7, 11, 10, 4, 13, 1, 5, 8, 12, 6, 9, 3, 2, 15},
+        {13, 8, 10, 1, 3, 15, 4, 2, 11, 6, 7, 12, 0, 5, 14, 9}
+    },
+    {
+        {10, 0, 9, 14, 6, 3, 15, 5, 1, 13, 12, 7, 11, 4, 2, 8},
+        {13, 7, 0, 9, 3, 4, 6, 10, 2, 8, 5, 14, 12, 11, 15, 1},
+        {13, 6, 4, 9, 8, 15, 3, 0, 11, 1, 2, 12, 5, 10, 14, 7},
+        {1, 10, 13, 0, 6, 9, 8, 7, 4, 15, 14, 3, 11, 5, 2, 12}
+    },
+    {
+        {7, 13, 14, 3, 0, 6, 9, 10, 1, 2, 8, 5, 11, 12, 4, 15},
+        {13, 8, 11, 5, 6, 15, 0, 3, 4, 7, 2, 12, 1, 10, 14, 9},
+        {10, 6, 9, 0, 12, 11, 7, 13, 15, 1, 3, 14, 5, 2, 8, 4},
+        {3, 15, 0, 6, 10, 1, 13, 8, 9, 4, 5, 11, 12, 7, 2, 14}
+    },
+    {
+        {2, 12, 4, 1, 7, 10, 11, 6, 8, 5, 3, 15, 13, 0, 14, 9},
+        {14, 11, 2, 12, 4, 7, 13, 1, 5, 0, 15, 10, 3, 9, 8, 6},
+        {4, 2, 1, 11, 10, 13, 7, 8, 15, 9, 12, 5, 6, 3, 0, 14},
+        {11, 8, 12, 7, 1, 14, 2, 13, 6, 15, 0, 9, 10, 4, 5, 3}
+    },
+    {
+        {12, 1, 10, 15, 9, 2, 6, 8, 0, 13, 3, 4, 14, 7, 5, 11},
+        {10, 15, 4, 2, 7, 12, 9, 5, 6, 1, 13, 14, 0, 11, 3, 8},
+        {9, 14, 15, 5, 2, 8, 12, 3, 7, 0, 4, 10, 1, 13, 11, 6},
+        {4, 3, 2, 12, 9, 5, 15, 10, 11, 14, 1, 7, 6, 0, 8, 13}
+    },
+    {
+        {4, 11, 2, 14, 15, 0, 8, 13, 3, 12, 9, 7, 5, 10, 6, 1},
+        {13, 0, 11, 7, 4, 9, 1, 10, 14, 3, 5, 12, 2, 15, 8, 6},
+        {1, 4, 11, 13, 12, 3, 7, 14, 10, 15, 6, 8, 0, 5, 9, 2},
+        {6, 11, 13, 8, 1, 4, 10, 7, 9, 5, 0, 15, 14, 2, 3, 12}
+    },
+    {
+        {13, 2, 8, 4, 6, 15, 11, 1, 10, 9, 3, 14, 5, 0, 12, 7},
+        {1, 15, 13, 8, 10, 3, 7, 4, 12, 5, 6, 11, 0, 14, 9, 2},
+        {7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8},
+        {2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11}
+    }
 };
 
-// PC-1 (64 → 56 bits)
 static const int PC1[56] = {
-57,49,41,33,25,17,9,
-1,58,50,42,34,26,18,
-10,2,59,51,43,35,27,
-19,11,3,60,52,44,36,
-63,55,47,39,31,23,15,
-7,62,54,46,38,30,22,
-14,6,61,53,45,37,29,
-21,13,5,28,20,12,4
+    57, 49, 41, 33, 25, 17, 9,
+    1, 58, 50, 42, 34, 26, 18,
+    10, 2, 59, 51, 43, 35, 27,
+    19, 11, 3, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15,
+    7, 62, 54, 46, 38, 30, 22,
+    14, 6, 61, 53, 45, 37, 29,
+    21, 13, 5, 28, 20, 12, 4
 };
 
-// PC-2 (56 → 48 bits)
 static const int PC2[48] = {
-14,17,11,24,1,5,
-3,28,15,6,21,10,
-23,19,12,4,26,8,
-16,7,27,20,13,2,
-41,52,31,37,47,55,
-30,40,51,45,33,48,
-44,49,39,56,34,53,
-46,42,50,36,29,32
+    14, 17, 11, 24, 1, 5,
+    3, 28, 15, 6, 21, 10,
+    23, 19, 12, 4, 26, 8,
+    16, 7, 27, 20, 13, 2,
+    41, 52, 31, 37, 47, 55,
+    30, 40, 51, 45, 33, 48,
+    44, 49, 39, 56, 34, 53,
+    46, 42, 50, 36, 29, 32
 };
 
-// Left shifts per round
-static const int SHIFTS[16] = {
-1,1,2,2,2,2,2,2,
-1,2,2,2,2,2,2,1
+static const int SHIFTS[DES_ROUNDS] = {
+    1, 1, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 1
 };
 
-// Simple permutation function
-uint64_t permute(uint64_t in, const int *table, int n) {
-    uint64_t out = 0;
-    for (int i = 0; i < n; i++) {
-        out <<= 1;
-        out |= (in >> (64 - table[i])) & 1;
+static inline uint64_t permute_bits(uint64_t input, const int *table, int count, int width) {
+    uint64_t output = 0;
+    for (int i = 0; i < count; ++i) {
+        output = (output << 1) | ((input >> (width - table[i])) & 1ULL);
     }
-    return out;
+    return output;
 }
 
-// Feistel function
-uint32_t feistel(uint32_t r, uint64_t k) {
-    uint64_t expanded = permute((uint64_t)r << 32, E, 48);
-    expanded ^= k;
-
-    uint32_t out = 0;
-    for (int i = 0; i < 8; i++) {
-        int chunk = (expanded >> (42 - 6*i)) & 0x3F;
-        int row = ((chunk & 0x20) >> 4) | (chunk & 1);
-        int col = (chunk >> 1) & 0xF;
-        out <<= 4;
-        out |= S[i][row][col];
+static inline uint64_t load_be64(const uint8_t *input) {
+    uint64_t value = 0;
+    for (int i = 0; i < 8; ++i) {
+        value = (value << 8) | input[i];
     }
-
-    return (uint32_t)permute((uint64_t)out << 32, P, 32);
+    return value;
 }
 
-void generate_keys(uint64_t key, uint64_t round_keys[ROUNDS]) {
-    // Step 1: Apply PC1 (64 → 56)
-    uint64_t permuted = permute(key, PC1, 56);
-    // Split into C and D (28 bits each)
-    uint32_t C = (permuted >> 28) & 0x0FFFFFFF;
-    uint32_t D = permuted & 0x0FFFFFFF;
-    for (int i = 0; i < ROUNDS; i++) {
-        // Step 2: Left circular shifts
-        C = ((C << SHIFTS[i]) | (C >> (28 - SHIFTS[i]))) & 0x0FFFFFFF;
-        D = ((D << SHIFTS[i]) | (D >> (28 - SHIFTS[i]))) & 0x0FFFFFFF;
-        // Combine back
-        uint64_t combined = ((uint64_t)C << 28) | D;
-        // Step 3: Apply PC2 (56 → 48)
-        round_keys[i] = permute(combined << 8, PC2, 48);
+static inline void store_be64(uint8_t *output, uint64_t value) {
+    for (int i = 7; i >= 0; --i) {
+        output[i] = static_cast<uint8_t>(value & 0xFFU);
+        value >>= 8;
     }
 }
 
-// Encrypt one block
-uint64_t des_encrypt_block(uint64_t block, uint64_t round_keys[]) {
-    block = permute(block, IP, 64);
+static inline uint32_t feistel(uint32_t half_block, uint64_t round_key) {
+    const uint64_t expanded = permute_bits(half_block, E, 48, 32) ^ round_key;
 
-    uint32_t L = block >> 32;
-    uint32_t R = block & 0xFFFFFFFF;
-
-    for (int i = 0; i < ROUNDS; i++) {
-        uint32_t temp = R;
-        R = L ^ feistel(R, round_keys[i]);
-        L = temp;
+    uint32_t substituted = 0;
+    for (int box = 0; box < 8; ++box) {
+        const uint32_t chunk = static_cast<uint32_t>((expanded >> (42 - 6 * box)) & 0x3FU);
+        const int row = ((chunk & 0x20U) >> 4) | (chunk & 0x01U);
+        const int col = (chunk >> 1) & 0x0F;
+        substituted = (substituted << 4) | static_cast<uint32_t>(S[box][row][col]);
     }
 
-    uint64_t pre_output = ((uint64_t)R << 32) | L;
-    return permute(pre_output, FP, 64);
+    return static_cast<uint32_t>(permute_bits(substituted, P, 32, 32));
 }
 
-// Parallel encryption
+static inline void generate_round_keys(uint64_t key, uint64_t round_keys[DES_ROUNDS]) {
+    const uint64_t permuted = permute_bits(key, PC1, 56, 64);
+    uint32_t c = static_cast<uint32_t>((permuted >> 28) & 0x0FFFFFFFUL);
+    uint32_t d = static_cast<uint32_t>(permuted & 0x0FFFFFFFUL);
+
+    for (int round = 0; round < DES_ROUNDS; ++round) {
+        c = ((c << SHIFTS[round]) | (c >> (28 - SHIFTS[round]))) & 0x0FFFFFFFUL;
+        d = ((d << SHIFTS[round]) | (d >> (28 - SHIFTS[round]))) & 0x0FFFFFFFUL;
+
+        const uint64_t combined = (static_cast<uint64_t>(c) << 28) | d;
+        round_keys[round] = permute_bits(combined, PC2, 48, 56);
+    }
+}
+
+static inline uint64_t des_encrypt_block(uint64_t block, const uint64_t round_keys[DES_ROUNDS]) {
+    block = permute_bits(block, IP, 64, 64);
+
+    uint32_t left = static_cast<uint32_t>(block >> 32);
+    uint32_t right = static_cast<uint32_t>(block & 0xFFFFFFFFULL);
+
+    for (int round = 0; round < DES_ROUNDS; ++round) {
+        const uint32_t next_left = right;
+        right = left ^ feistel(right, round_keys[round]);
+        left = next_left;
+    }
+
+    const uint64_t pre_output =
+        (static_cast<uint64_t>(right) << 32) | static_cast<uint64_t>(left);
+    return permute_bits(pre_output, FP, 64, 64);
+}
+
+} // namespace
+
 void des_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t key, size_t blocks) {
-    uint64_t round_keys[ROUNDS];
-    generate_keys(key, round_keys);
+    uint64_t round_keys[DES_ROUNDS];
+    generate_round_keys(key, round_keys);
 
     #pragma omp parallel for
-    for (int i = 0; i < blocks; i++) {
-        uint64_t block;
-        memcpy(&block, input + i*8, 8);
+    for (long long block = 0; block < static_cast<long long>(blocks); ++block) {
+        const size_t offset = static_cast<size_t>(block) * FRAMEWORK_BLOCK_SIZE;
+        const uint64_t left = load_be64(input + offset);
+        const uint64_t right = load_be64(input + offset + DES_BLOCK_SIZE);
 
-        uint64_t enc = des_encrypt_block(block, round_keys);
-
-        memcpy(output + i*8, &enc, 8);
+        store_be64(output + offset, des_encrypt_block(left, round_keys));
+        store_be64(output + offset + DES_BLOCK_SIZE, des_encrypt_block(right, round_keys));
     }
 }
 
-void des_cpu_encrypt_ctr(uint8_t *output, uint64_t key, size_t blocks, uint64_t ctr){
-    uint64_t round_keys[ROUNDS];
-    generate_keys(key, round_keys);
+void des_cpu_encrypt_ctr(uint8_t *output, uint64_t key, size_t blocks, uint64_t ctr) {
+    uint64_t round_keys[DES_ROUNDS];
+    generate_round_keys(key, round_keys);
 
     #pragma omp parallel for
-    for (size_t i = 0; i < blocks; i++) {
-        uint64_t counter_block = ctr + i;
+    for (long long block = 0; block < static_cast<long long>(blocks); ++block) {
+        const uint64_t counter0 = ctr + (static_cast<uint64_t>(block) * 2ULL);
+        const uint64_t counter1 = counter0 + 1ULL;
+        const size_t offset = static_cast<size_t>(block) * FRAMEWORK_BLOCK_SIZE;
 
-        uint64_t enc = des_encrypt_block(counter_block, round_keys);
-
-        memcpy(output + i*8, &enc, 8);
+        store_be64(output + offset, des_encrypt_block(counter0, round_keys));
+        store_be64(output + offset + DES_BLOCK_SIZE, des_encrypt_block(counter1, round_keys));
     }
 }
 
-uint64_t des_cpu_get_key(){
-    uint64_t key = 0x133457799BBCDFF1;
-    return key;
+uint64_t des_cpu_get_key() {
+    return 0x133457799BBCDFF1ULL;
 }

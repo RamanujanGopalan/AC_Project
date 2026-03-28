@@ -28,20 +28,27 @@ int main(){
     uint64_t ctr = rng();
 
     // ===== ENCRYPTION =====
-    // auto key = aes_cpu_get_key(); 
-    // aes_cpu_encrypt_ctr(h_cipher,key,blocks, ctr);
-
-    // auto key = des_cpu_get_key(); 
-    // des_cpu_encrypt_ctr(h_cipher, key, blocks, ctr); 
-
-    // auto key = des_cpu_get_key(); 
-    // des_cpu_encrypt_ctr(h_cipher, key, blocks, ctr); 
-
-    // auto key = kalyna_cpu_get_key(); 
-    // kalyna_cpu_encrypt_ctr(h_cipher, key, blocks, ctr);
-
-    auto key = simon_cpu_get_key(); 
-    simon_cpu_encrypt_ctr(h_cipher, key, blocks, ctr);
+    #if defined(CIPHER_AES)
+        auto key = aes_cpu_get_key();
+        aes_cpu_encrypt_ctr(h_cipher, key, blocks, ctr);
+    #elif defined(CIPHER_DES)
+        auto key = des_cpu_get_key();
+        des_cpu_encrypt_ctr(h_cipher, key, blocks, ctr);
+    #elif defined(CIPHER_CHACHA)
+        auto key = chacha_cpu_get_key();
+        chacha_cpu_encrypt_ctr(h_cipher, key, blocks, ctr);
+    #elif defined(CIPHER_SALSA)
+        auto key = salsa_cpu_get_key();
+        salsa_cpu_encrypt_ctr(h_cipher, key, blocks, ctr);
+    #elif defined(CIPHER_KALYNA)
+        auto key = kalyna_cpu_get_key();
+        kalyna_cpu_encrypt_ctr(h_cipher, key, blocks, ctr);
+    #elif defined(CIPHER_SIMON)
+        auto key = simon_cpu_get_key();
+        simon_cpu_encrypt_ctr(h_cipher, key, blocks, ctr);
+    #else
+        #error "Define one CPU cipher macro such as CIPHER_AES, CIPHER_DES, CIPHER_CHACHA, CIPHER_SALSA, CIPHER_KALYNA, or CIPHER_SIMON."
+    #endif
 
     for (size_t i = 0; i < size; i++) {
         h_cipher[i] ^= h_plain[i];

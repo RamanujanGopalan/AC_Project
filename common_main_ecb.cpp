@@ -26,20 +26,30 @@ int main(){
     }
 
     // ===== ENCRYPTION =====
-    auto key = aes_cpu_get_key(); 
-    aes_cpu_encrypt(h_plain,h_cipher,key,blocks);
-
-    // auto key = des_cpu_get_key(); 
-    // des_cpu_encrypt(h_plain, h_cipher, key, blocks); 
-
-    // auto key = des_cpu_get_key(); 
-    // des_cpu_encrypt(h_plain, h_cipher, key, blocks); 
-
-    // auto key = kalyna_cpu_get_key(); 
-    // kalyna_cpu_encrypt(h_plain, h_cipher, key, blocks);
-
-    // auto key = simon_cpu_get_key(); 
-    // simon_cpu_encrypt(h_plain, h_cipher, key, blocks);
+    #if defined(CIPHER_AES)
+        auto key = aes_cpu_get_key();
+        aes_cpu_encrypt(h_plain, h_cipher, key, blocks);
+    #elif defined(CIPHER_DES)
+        auto key = des_cpu_get_key();
+        des_cpu_encrypt(h_plain, h_cipher, key, blocks);
+    #elif defined(CIPHER_CHACHA)
+        auto key = chacha_cpu_get_key();
+        chacha_cpu_encrypt(h_plain, h_cipher, key, blocks);
+    #elif defined(CIPHER_SALSA)
+        auto key = salsa_cpu_get_key();
+        salsa_cpu_encrypt(h_plain, h_cipher, key, blocks);
+    #elif defined(CIPHER_KALYNA)
+        auto key = kalyna_cpu_get_key();
+        kalyna_cpu_encrypt(h_plain, h_cipher, key, blocks);
+    #elif defined(CIPHER_SIMON)
+        auto key = simon_cpu_get_key();
+        simon_cpu_encrypt(h_plain, h_cipher, key, blocks);
+    #elif defined(CIPHER_GIFT)
+        auto key = gift_cpu_get_key();
+        gift_cpu_encrypt(h_plain, h_cipher, key, blocks);
+    #else
+        #error "Define one CPU cipher macro such as CIPHER_AES, CIPHER_DES, CIPHER_CHACHA, CIPHER_SALSA, CIPHER_KALYNA, CIPHER_SIMON, or CIPHER_GIFT."
+    #endif
 
     auto end = chrono::high_resolution_clock::now();
 
