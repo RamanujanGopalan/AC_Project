@@ -1,24 +1,13 @@
-#include <common_header.hpp>
-
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>
-#include <omp.h>
 
 namespace {
 
-constexpr size_t FRAMEWORK_BLOCK_SIZE = 16;
 constexpr int SALSA_ROUNDS = 20;
 
 static inline uint32_t rotl32(uint32_t value, int amount) {
     return (value << amount) | (value >> (32 - amount));
-}
-
-static inline uint32_t load_le32(const uint8_t *input) {
-    return static_cast<uint32_t>(input[0]) |
-           (static_cast<uint32_t>(input[1]) << 8) |
-           (static_cast<uint32_t>(input[2]) << 16) |
-           (static_cast<uint32_t>(input[3]) << 24);
 }
 
 static inline void store_le32(uint8_t *output, uint32_t value) {
@@ -58,16 +47,9 @@ static inline void salsa20_block(const uint32_t input[16], uint32_t output[16]) 
     }
 }
 
-static inline void write_first_16_bytes(uint8_t *output, const uint32_t state[16]) {
-    store_le32(output + 0, state[0]);
-    store_le32(output + 4, state[1]);
-    store_le32(output + 8, state[2]);
-    store_le32(output + 12, state[3]);
-}
-
 } // namespace
 
-uint32_t* salsa_cpu_get_key() {
+extern "C" void* salsa20_cpu_get_key_native() {
     uint32_t *state = static_cast<uint32_t*>(std::malloc(16 * sizeof(uint32_t)));
 
     state[0] = 0x61707865U;
@@ -88,43 +70,40 @@ uint32_t* salsa_cpu_get_key() {
     return state;
 }
 
-void salsa_cpu_encrypt(uint8_t *input, uint8_t *output, uint32_t *key, size_t blocks) {
-    #pragma omp parallel for
-    for (long long block = 0; block < static_cast<long long>(blocks); ++block) {
-        uint32_t state[16];
-        uint32_t keystream[16];
-        const size_t offset = static_cast<size_t>(block) * FRAMEWORK_BLOCK_SIZE;
-
-        for (int i = 0; i < 16; ++i) {
-            state[i] = key[i];
-        }
-
-        state[6] = load_le32(input + offset + 0);
-        state[7] = load_le32(input + offset + 4);
-        state[8] = load_le32(input + offset + 8);
-        state[9] = load_le32(input + offset + 12);
-
-        salsa20_block(state, keystream);
-        write_first_16_bytes(output + offset, keystream);
-    }
+extern "C" void salsa20_cpu_free_key_native(void *key) {
+    std::free(key);
 }
 
-void salsa_cpu_encrypt_ctr(uint8_t *output, uint32_t *key, size_t blocks, uint64_t ctr) {
-    #pragma omp parallel for
-    for (long long block = 0; block < static_cast<long long>(blocks); ++block) {
+extern "C" void salsa20_cpu_crypt_ctr_native(const uint8_t *input,
+                                              uint8_t *output,
+                                              void *key,
+                                              size_t blocks,
+                                              uint64_t ctr) {
+    auto *base_state = static_cast<uint32_t*>(key);
+
+    for (size_t block = 0; block < blocks; ++block) {
         uint32_t state[16];
         uint32_t keystream[16];
-        const uint64_t counter = ctr + static_cast<uint64_t>(block);
-        const size_t offset = static_cast<size_t>(block) * FRAMEWORK_BLOCK_SIZE;
+        const size_t offset = block * 64;
+        const uint64_t counter = ctr + block;
 
         for (int i = 0; i < 16; ++i) {
-            state[i] = key[i];
+            state[i] = base_state[i];
         }
 
         state[8] = static_cast<uint32_t>(counter & 0xFFFFFFFFULL);
         state[9] = static_cast<uint32_t>(counter >> 32);
 
         salsa20_block(state, keystream);
-        write_first_16_bytes(output + offset, keystream);
+
+        for (int i = 0; i < 16; ++i) {
+            store_le32(output + offset + i * 4, keystream[i]);
+        }
+
+        if (input != nullptr) {
+            for (int i = 0; i < 64; ++i) {
+                output[offset + i] ^= input[offset + i];
+            }
+        }
     }
 }

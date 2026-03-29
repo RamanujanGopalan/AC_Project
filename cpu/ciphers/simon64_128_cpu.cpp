@@ -9,6 +9,8 @@
 #define ROUNDS 68
 #define BLOCK_SIZE 16  // 128-bit block
 
+namespace {
+
 // z-sequence (z0 for SIMON-128/128)
 static const uint8_t Z[62] = {
 1,1,1,1,1,0,1,0,0,1,0,0,0,0,1,0,
@@ -62,6 +64,8 @@ void simon_encrypt_block(uint64_t *block, uint64_t round_keys[]) {
     block[0] = x;
     block[1] = y;
 }
+
+} // namespace
 
 // Parallel encryption
 void simon_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t* keys, size_t blocks) {

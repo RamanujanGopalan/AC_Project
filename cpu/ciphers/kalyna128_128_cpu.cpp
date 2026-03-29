@@ -8,6 +8,8 @@
 #define BLOCK_SIZE 16
 #define ROUNDS 10
 
+namespace {
+
 // 4 S-boxes (Kalyna uses 4)
 uint8_t SBOX[4][256] = {
 {
@@ -153,6 +155,8 @@ void keyExpansion(uint8_t *key, uint8_t *roundKeys)
         for(int i=0;i<16;i++)
             roundKeys[r*16+i] = roundKeys[(r-1)*16+i] ^ (uint8_t)(r+i);
 }
+
+} // namespace
 
 // --- Encryption (OpenMP parallel) ---
 void kalyna_cpu_encrypt(uint8_t *in, uint8_t *out, uint8_t *keys, size_t blocks)

@@ -1,73 +1,32 @@
 CXX = g++
 NVCC = nvcc
 
-CXXFLAGS = -O3 -fopenmp -std=c++17 -I.
-NVCCFLAGS = -O3
+CXXFLAGS = -O3 -fopenmp -std=c++17 -I. -Iinclude
+NVCCFLAGS = -O3 -I. -Iinclude
 
-ECB_TARGETS = aes_ecb des_ecb chacha_ecb salsa_ecb kalyna_ecb simon_ecb gift_ecb
-CTR_TARGETS = aes_ctr des_ctr chacha_ctr salsa_ctr kalyna_ctr simon_ctr
-GPU_TARGETS = des_gpu chacha20_gpu salsa20_gpu
-TARGETS = $(ECB_TARGETS) $(CTR_TARGETS) $(GPU_TARGETS)
+CPU_TARGETS = cpu_block_runner cpu_stream_runner
+GPU_TARGETS = gpu_block_runner gpu_stream_runner
+TARGETS = $(CPU_TARGETS) $(GPU_TARGETS)
 
-.PHONY: all clean cpu gpu ecb ctr
+.PHONY: all cpu gpu clean
 
 all: $(TARGETS)
 
-cpu: $(ECB_TARGETS) $(CTR_TARGETS)
+cpu: $(CPU_TARGETS)
 
 gpu: $(GPU_TARGETS)
 
-ecb: $(ECB_TARGETS)
+cpu_block_runner: runners/cpu_block_runner.cpp cpu/cipher_registry.cpp cpu/modes/block_ecb_cpu.cpp cpu/modes/block_ctr_cpu.cpp cpu/ciphers/aes128_cpu.cpp cpu/ciphers/des_cpu.cpp cpu/ciphers/simon64_128_cpu.cpp cpu/ciphers/kalyna128_128_cpu.cpp cpu/ciphers/gift64_cpu.cpp
+	$(CXX) $(CXXFLAGS) -o $@ runners/cpu_block_runner.cpp cpu/cipher_registry.cpp cpu/modes/block_ecb_cpu.cpp cpu/modes/block_ctr_cpu.cpp cpu/ciphers/aes128_cpu.cpp cpu/ciphers/des_cpu.cpp cpu/ciphers/simon64_128_cpu.cpp cpu/ciphers/kalyna128_128_cpu.cpp cpu/ciphers/gift64_cpu.cpp cpu/streams/chacha20_cpu.cpp cpu/streams/salsa20_cpu.cpp
 
-ctr: $(CTR_TARGETS)
+cpu_stream_runner: runners/cpu_stream_runner.cpp cpu/cipher_registry.cpp cpu/modes/stream_ctr_cpu.cpp cpu/streams/chacha20_cpu.cpp cpu/streams/salsa20_cpu.cpp
+	$(CXX) $(CXXFLAGS) -o $@ runners/cpu_stream_runner.cpp cpu/cipher_registry.cpp cpu/modes/stream_ctr_cpu.cpp cpu/streams/chacha20_cpu.cpp cpu/streams/salsa20_cpu.cpp cpu/ciphers/aes128_cpu.cpp cpu/ciphers/des_cpu.cpp cpu/ciphers/simon64_128_cpu.cpp cpu/ciphers/kalyna128_128_cpu.cpp cpu/ciphers/gift64_cpu.cpp
 
-aes_ecb: common_main_ecb.cpp AES_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_AES -o $@ common_main_ecb.cpp AES_CPU_parallel.cpp
+gpu_block_runner: runners/gpu_block_runner.cu gpu/ciphers/des_gpu.cuh gpu/modes/gpu_chunk_runner.cuh gpu/modes/block_ecb_gpu.cuh gpu/modes/block_ctr_gpu.cuh
+	$(NVCC) $(NVCCFLAGS) -o $@ runners/gpu_block_runner.cu
 
-des_ecb: common_main_ecb.cpp DES_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_DES -o $@ common_main_ecb.cpp DES_CPU_parallel.cpp
-
-chacha_ecb: common_main_ecb.cpp CHACHA20_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_CHACHA -o $@ common_main_ecb.cpp CHACHA20_CPU_parallel.cpp
-
-salsa_ecb: common_main_ecb.cpp SALSA20_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_SALSA -o $@ common_main_ecb.cpp SALSA20_CPU_parallel.cpp
-
-kalyna_ecb: common_main_ecb.cpp KALYNA_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_KALYNA -o $@ common_main_ecb.cpp KALYNA_CPU_parallel.cpp
-
-simon_ecb: common_main_ecb.cpp SIMON_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_SIMON -o $@ common_main_ecb.cpp SIMON_CPU_parallel.cpp
-
-gift_ecb: common_main_ecb.cpp GIFT_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_GIFT -o $@ common_main_ecb.cpp GIFT_CPU_parallel.cpp
-
-aes_ctr: common_main_ctr.cpp AES_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_AES -o $@ common_main_ctr.cpp AES_CPU_parallel.cpp
-
-des_ctr: common_main_ctr.cpp DES_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_DES -o $@ common_main_ctr.cpp DES_CPU_parallel.cpp
-
-chacha_ctr: common_main_ctr.cpp CHACHA20_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_CHACHA -o $@ common_main_ctr.cpp CHACHA20_CPU_parallel.cpp
-
-salsa_ctr: common_main_ctr.cpp SALSA20_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_SALSA -o $@ common_main_ctr.cpp SALSA20_CPU_parallel.cpp
-
-kalyna_ctr: common_main_ctr.cpp KALYNA_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_KALYNA -o $@ common_main_ctr.cpp KALYNA_CPU_parallel.cpp
-
-simon_ctr: common_main_ctr.cpp SIMON_CPU_parallel.cpp common_header.hpp
-	$(CXX) $(CXXFLAGS) -DCIPHER_SIMON -o $@ common_main_ctr.cpp SIMON_CPU_parallel.cpp
-
-des_gpu: DES_GPU.cu
-	$(NVCC) $(NVCCFLAGS) -o $@ DES_GPU.cu
-
-chacha20_gpu: CHACHA20_GPU.cu
-	$(NVCC) $(NVCCFLAGS) -o $@ CHACHA20_GPU.cu
-
-salsa20_gpu: SALSA20_GPU.cu
-	$(NVCC) $(NVCCFLAGS) -o $@ SALSA20_GPU.cu
+gpu_stream_runner: runners/gpu_stream_runner.cu gpu/streams/chacha20_gpu.cuh gpu/streams/salsa20_gpu.cuh gpu/modes/gpu_chunk_runner.cuh
+	$(NVCC) $(NVCCFLAGS) -o $@ runners/gpu_stream_runner.cu
 
 clean:
 	rm -f $(TARGETS) $(TARGETS:=.exe)
