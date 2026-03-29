@@ -34,7 +34,7 @@ make gpu_stream_runner
 ./gpu_stream_runner salsa ctr 1000
 ```
 
-## Colab
+## Colab [How to run on collab]
 
 ### 1. Start a GPU runtime
 
