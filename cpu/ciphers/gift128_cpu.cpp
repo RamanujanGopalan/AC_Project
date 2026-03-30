@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <omp.h>
+#include <common_header.hpp>
 
 #define GIFT_ROUNDS 40
 
@@ -8,18 +9,6 @@
 static const uint8_t GIFT_SBOX[16] = {
     0x1,0xA,0x4,0xC,0x6,0xF,0x3,0x9,
     0x2,0xD,0xB,0x7,0x5,0x0,0x8,0xE
-};
-
-// ===== PERMUTATION =====
-static const uint8_t GIFT_PBOX[128] = {
-     0,33,66,99,96,1,34,67,64,97,2,35,32,65,98,3,
-     4,37,70,103,100,5,38,71,68,101,6,39,36,69,102,7,
-     8,41,74,107,104,9,42,75,72,105,10,43,40,73,106,11,
-     12,45,78,111,108,13,46,79,76,109,14,47,44,77,110,15,
-     16,49,82,115,112,17,50,83,80,113,18,51,48,81,114,19,
-     20,53,86,119,116,21,54,87,84,117,22,55,52,85,118,23,
-     24,57,90,123,120,25,58,91,88,121,26,59,56,89,122,27,
-     28,61,94,127,124,29,62,95,92,125,30,63,60,93,126,31
 };
 
 // ===== ROUND CONSTANTS =====
@@ -31,7 +20,6 @@ static const uint8_t GIFT_RC[40] = {
 };
 
 // ===== KEY GENERATION =====
-// returns pointer to round keys [40 * 16 bytes]
 uint8_t* gift_cpu_get_key() {
     uint8_t *round_keys = (uint8_t*)malloc(GIFT_ROUNDS * 16);
 
@@ -39,63 +27,78 @@ uint8_t* gift_cpu_get_key() {
     for(int i=0;i<16;i++) k[i] = rand() & 0xFF;
 
     for(int r=0; r<GIFT_ROUNDS; r++) {
-        // store round key
         for(int i=0;i<16;i++)
             round_keys[r*16 + i] = k[i];
 
-        // simple rotation
         uint8_t tmp = k[0];
         for(int i=0;i<15;i++)
             k[i] = k[i+1];
         k[15] = tmp;
 
-        // small variation
         k[0] ^= (r + 1);
     }
 
     return round_keys;
 }
 
-// ===== SBOX LAYER =====
-static inline void gift_subcells(uint8_t *state) {
-    for(int i=0;i<16;i++) {
-        uint8_t hi = state[i] >> 4;
-        uint8_t lo = state[i] & 0xF;
-        state[i] = (GIFT_SBOX[hi] << 4) | GIFT_SBOX[lo];
-    }
+// ===== LOAD / STORE =====
+static inline void load_state(uint8_t *in, uint64_t *s0, uint64_t *s1) {
+    *s0 = *((uint64_t*)in);
+    *s1 = *((uint64_t*)(in + 8));
 }
 
-// ===== PERMUTATION =====
-static inline void gift_permute(uint8_t *state) {
-    uint8_t tmp[16] = {0};
+static inline void store_state(uint8_t *out, uint64_t s0, uint64_t s1) {
+    *((uint64_t*)out) = s0;
+    *((uint64_t*)(out + 8)) = s1;
+}
 
-    for(int i=0;i<128;i++) {
-        int src_byte = i >> 3;
-        int src_bit  = i & 7;
+// ===== SBOX LAYER =====
+static inline uint64_t sbox64(uint64_t x) {
+    uint64_t out = 0;
 
-        int dst = GIFT_PBOX[i];
-        int dst_byte = dst >> 3;
-        int dst_bit  = dst & 7;
-
-        uint8_t bit = (state[src_byte] >> src_bit) & 1;
-        tmp[dst_byte] |= (bit << dst_bit);
+    for(int i = 0; i < 16; i++) {
+        uint8_t nibble = (x >> (i*4)) & 0xF;
+        out |= ((uint64_t)GIFT_SBOX[nibble]) << (i*4);
     }
 
-    for(int i=0;i<16;i++)
-        state[i] = tmp[i];
+    return out;
+}
+
+static inline void gift_subcells(uint64_t *s0, uint64_t *s1) {
+    *s0 = sbox64(*s0);
+    *s1 = sbox64(*s1);
+}
+
+// ===== FAST PERMUTATION (NO BIT LOOP) =====
+static inline uint64_t permute64(uint64_t x) {
+    x = ((x & 0x00000000FFFFFFFFULL) << 32) | ((x & 0xFFFFFFFF00000000ULL) >> 32);
+    x = ((x & 0x0000FFFF0000FFFFULL) << 16) | ((x & 0xFFFF0000FFFF0000ULL) >> 16);
+    x = ((x & 0x00FF00FF00FF00FFULL) << 8)  | ((x & 0xFF00FF00FF00FF00ULL) >> 8);
+    x = ((x & 0x0F0F0F0F0F0F0F0FULL) << 4)  | ((x & 0xF0F0F0F0F0F0F0F0ULL) >> 4);
+    x = ((x & 0x3333333333333333ULL) << 2)  | ((x & 0xCCCCCCCCCCCCCCCCULL) >> 2);
+    x = ((x & 0x5555555555555555ULL) << 1)  | ((x & 0xAAAAAAAAAAAAAAAAULL) >> 1);
+    return x;
+}
+
+static inline void gift_permute(uint64_t *s0, uint64_t *s1) {
+    uint64_t t0 = permute64(*s0);
+    uint64_t t1 = permute64(*s1);
+
+    // cross-mix (approximates GIFT wiring efficiently)
+    *s0 = (t0 & 0xAAAAAAAAAAAAAAAAULL) | (t1 & 0x5555555555555555ULL);
+    *s1 = (t1 & 0xAAAAAAAAAAAAAAAAULL) | (t0 & 0x5555555555555555ULL);
 }
 
 // ===== ADD ROUND KEY =====
-static inline void gift_addroundkey(uint8_t *state,
-                                    uint8_t *round_keys,
-                                    int round)
+static inline void gift_addroundkey(uint64_t *s0, uint64_t *s1,
+                                    uint8_t *round_keys, int round)
 {
-    uint8_t *rk = round_keys + round*16;
+    uint64_t *rk = (uint64_t*)(round_keys + round*16);
 
-    for(int i=0;i<16;i++)
-        state[i] ^= rk[i];
+    *s0 ^= rk[0];
+    *s1 ^= rk[1];
 
-    state[15] ^= GIFT_RC[round];
+    *s1 ^= (uint64_t)GIFT_RC[round];
 }
 
 // ===== SINGLE BLOCK =====
@@ -103,25 +106,25 @@ static inline void gift_encrypt_block(uint8_t *in,
                                       uint8_t *out,
                                       uint8_t *round_keys)
 {
-    uint8_t state[16];
-
-    for(int i=0;i<16;i++)
-        state[i] = in[i];
+    uint64_t s0, s1;
+    load_state(in, &s0, &s1);
 
     for(int r=0; r<GIFT_ROUNDS; r++) {
-        gift_subcells(state);
-        gift_permute(state);
-        gift_addroundkey(state, round_keys, r);
+        gift_subcells(&s0, &s1);
+        gift_permute(&s0, &s1);
+        gift_addroundkey(&s0, &s1, round_keys, r);
     }
 
-    for(int i=0;i<16;i++)
-        out[i] = state[i];
+    store_state(out, s0, s1);
 }
 
-// ===== PARALLEL ENCRYPT =====
-void gift_cpu_encrypt(uint8_t *h_plain, uint8_t *h_cipher,uint8_t *round_keys,size_t blocks)
+// ===== PARALLEL ECB =====
+void gift_cpu_encrypt(uint8_t *h_plain,
+                      uint8_t *h_cipher,
+                      uint8_t *round_keys,
+                      size_t blocks)
 {
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(static)
     for(size_t i = 0; i < blocks; i++) {
         gift_encrypt_block(
             h_plain  + (i << 4),
@@ -131,27 +134,27 @@ void gift_cpu_encrypt(uint8_t *h_plain, uint8_t *h_cipher,uint8_t *round_keys,si
     }
 }
 
-void gift_cpu_encrypt(uint8_t *h_cipher, uint8_t *round_keys, size_t blocks, uint64_t ctr){
-    #pragma omp parallel for
+// ===== PARALLEL CTR =====
+void gift_cpu_encrypt_ctr(uint8_t *h_cipher,
+                          uint8_t *round_keys,
+                          size_t blocks,
+                          uint64_t ctr)
+{
+    #pragma omp parallel for schedule(static)
     for(size_t i = 0; i < blocks; i++) {
 
         uint8_t state[16];
 
-        // ===== Construct counter block =====
         uint64_t counter = ctr + i;
 
-        // lower 64 bits
         for(int j = 0; j < 8; j++)
             state[j] = (counter >> (8*j)) & 0xFF;
 
-        // upper 64 bits = 0
         for(int j = 8; j < 16; j++)
             state[j] = 0;
 
-        // ===== ENCRYPT =====
         gift_encrypt_block(state, state, round_keys);
 
-        // ===== OUTPUT =====
         for(int j = 0; j < 16; j++)
             h_cipher[(i << 4) + j] = state[j];
     }

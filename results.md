@@ -1,516 +1,161 @@
 # AES
-Device: cpu\
-Cipher: aes\
-Variant: AES-128\
-Mode: ecb\
-Blocks(N): 100000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \00 
-First ciphertext block:\
-d9 a5 6b 8c 62 26 fc 94 35 52 3c a5 4d c4 d3 \b3 
-
+## CPU Parallel
+### ECB
+First block ciphertext:\
+e2 74 1c 2b 1e 90 e7 a3 72 81 b2 5d 9f 0e 42 2b\
+\
 ===== PERFORMANCE =====\
-Total Time: 54098.157 ms\
-Kernel Time: 54098.157 ms\
+Total Time: 55585.748 ms\
+Kernel Time: 55585.748 ms\
 H2D Time: 0.000 ms\
 D2H Time: 0.000 ms\
-
+\
 Throughput:\
-Blocks/sec: 1848491.82\
+Blocks/sec: 1886411.62\
 GB/sec: 0.03\
-
----
-
-Device: cpu\
-Cipher: aes\
-Variant: AES-128\
-Mode: ecb\
-Blocks(N): 10000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \00 
-First ciphertext block:\
-d9 a5 6b 8c 62 26 fc 94 35 52 3c a5 4d c4 d3 \b3 
-
+\
+Sample Output: e2741c2b1e90e7a37281b25d9f0e422b\
+### CTR
+First block ciphertext:\
+fa c9 5b 98 df f6 c3 84 65 0a 57 f3 11 c5 c7 4d \
+\
 ===== PERFORMANCE =====\
-Total Time: 4783.277 ms\
-Kernel Time: 4783.277 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
+Total Time: 59769.377 ms\
+Kernel Time: N.A\
+H2D Time: N.A\
+D2H Time: N.A\
+\
 Throughput:\
-Blocks/sec: 2090616.81\
+Blocks/sec: 1754369.96\
 GB/sec: 0.03\
+\
+Sample Output: fac95b98dff6c384650a57f311c5c74d\
 
----
-Device: cpu\
-Cipher: aes\
-Variant: AES-128\
-Mode: ecb\
-Blocks(N): 100000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \00 
-First ciphertext block:\
-d9 a5 6b 8c 62 26 fc 94 35 52 3c a5 4d c4 d3 \b3 
-
+# CHACHA 20
+## CPU Parallel
+### ECB
+First block ciphertext:\
+62 2c 91 90 a4 dd 9b 3e b9 72 49 ee 3f b4 f4 14 \
+\
 ===== PERFORMANCE =====\
-Total Time: 45.258 ms\
-Kernel Time: 45.258 ms\
+Total Time: 33162.288 ms\
+Kernel Time: 33162.288 ms\
 H2D Time: 0.000 ms\
 D2H Time: 0.000 ms\
-
+\
 Throughput:\
-Blocks/sec: 2209570.61\
-GB/sec: 0.03\
-
----
-Device: cpu\
-Cipher: aes\
-Variant: AES-128\
-Mode: ctr\
-Blocks(N): 100000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \00 
-First ciphertext block:\
-f1 60 5d 73 e2 7a cc 30 5e d7 0d 40 28 f9 cb \f3 
-
+Blocks/sec: 3161953.08\
+GB/sec: 0.05\
+\
+Sample Output: 622c9190a4dd9b3eb97249ee3fb4f414\
+### CTR
+First block ciphertext:\
+3a 83 0b 2e fe 8b 83 15 80 21 02 93 6b f2 8e a6 \
+\
 ===== PERFORMANCE =====\
-Total Time: 48086.719 ms\
-Kernel Time: 48086.719 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
+Total Time: 34261.287 ms\
+Kernel Time: N.A\
+H2D Time: N.A\
+D2H Time: N.A\
+\
 Throughput:\
-Blocks/sec: 2079576.27\
-GB/sec: 0.03\
-
----
-Device: cpu\
-Cipher: aes\
-Variant: AES-128\
-Mode: ctr\
-Blocks(N): 10000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \00 
-First ciphertext block:\
-f1 60 5d 73 e2 7a cc 30 5e d7 0d 40 28 f9 cb \f3 
-
-===== PERFORMANCE =====\
-Total Time: 4830.616 ms\
-Kernel Time: 4830.616 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
-Throughput:\
-Blocks/sec: 2070129.45\
-GB/sec: 0.03\
-
----
-Device: cpu\
-Cipher: aes\
-Variant: AES-128\
-Mode: ctr\
-Blocks(N): 100000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \00 
-First ciphertext block:\
-f1 60 5d 73 e2 7a cc 30 5e d7 0d 40 28 f9 cb \f3 
-
-===== PERFORMANCE =====\
-Total Time: 41.621 ms\
-Kernel Time: 41.621 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
-Throughput:\
-Blocks/sec: 2402628.49\
-GB/sec: 0.04\
-
----
-
+Blocks/sec: 3060527.15\
+GB/sec: 0.05\
+\
+Sample Output: 3a830b2efe8b8315802102936bf28ea6\
 
 # DES
-Device: cpu\
-Cipher: des\
-Variant: DES\
-Mode: ecb\
-Blocks(N): 100000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-94 8a 43 f9 8a 83 4f 7e \
-
+## CPU Parallel
+### ECB
+First block ciphertext:\
+70 b3 ca 67 8d 42 cb 67 b0 14 56 45 b9 fc 69 b6 \
+\
 ===== PERFORMANCE =====\
-Total Time: 230240.155 ms\
-Kernel Time: 230240.155 ms\
+Total Time: 248517.531 ms\
+Kernel Time: 248517.531 ms\
 H2D Time: 0.000 ms\
 D2H Time: 0.000 ms\
-
+\
 Throughput:\
-Blocks/sec: 434329.10\
-GB/sec: 0.00\
-
----
-Device: cpu\
-Cipher: des\
-Variant: DES\
-Mode: ecb\
-Blocks(N): 10000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-94 8a 43 f9 8a 83 4f 7e \
-
-===== PERFORMANCE =====\
-Total Time: 30336.632 ms\
-Kernel Time: 30336.632 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
-Throughput:\
-Blocks/sec: 329634.49\
-GB/sec: 0.00\
-
----
-Device: cpu\
-Cipher: des\
-Variant: DES\
-Mode: ecb\
-Blocks(N): 100000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-94 8a 43 f9 8a 83 4f 7e \
-
-===== PERFORMANCE =====\
-Total Time: 206.854 ms\
-Kernel Time: 206.854 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
-Throughput:\
-Blocks/sec: 483431.68\
-GB/sec: 0.00\
-
----
-Device: cpu\
-Cipher: des\
-Variant: DES\
-Mode: ctr\
-Blocks(N): 100000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-5d de 80 56 f8 cd 4f 89 \
-
-===== PERFORMANCE =====\
-Total Time: 244748.525 ms\
-Kernel Time: 244748.525 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
-Throughput:\
-Blocks/sec: 408582.65\
-GB/sec: 0.00\
-
----
-Device: cpu\
-Cipher: des\
-Variant: DES\
-Mode: ctr\
-Blocks(N): 10000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-5d de 80 56 f8 cd 4f 89 \
-
-===== PERFORMANCE =====\
-Total Time: 25187.933 ms\
-Kernel Time: 25187.933 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
-Throughput:\
-Blocks/sec: 397015.50\
-GB/sec: 0.00\
-
----
-Device: cpu\
-Cipher: des\
-Variant: DES\
-Mode: ctr\
-Blocks(N): 100000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-5d de 80 56 f8 cd 4f 89 \
-
-===== PERFORMANCE =====\
-Total Time: 202.070 ms\
-Kernel Time: 202.070 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms\
-
-Throughput:\
-Blocks/sec: 494877.66\
-GB/sec: 0.00\
-
----
+Blocks/sec: 421932.41\
+GB/sec: 0.01\
+\
+Sample Output: 70b3ca678d42cb67b0145645b9fc69b6\
+### CTR
 
 # GIFT
-
+## CPU Parallel
+### ECB
+First block ciphertext:\
+d2 85 49 e4 9c fe b5 53 e8 a2 f4 b9 cb 42 1e 4d \
+\
+===== PERFORMANCE =====\
+Total Time: 1711898.738 ms\
+Kernel Time: 1711898.738 ms\
+H2D Time: 0.000 ms\
+D2H Time: 0.000 ms\
+\
+Throughput:\
+Blocks/sec: 61252.22\
+GB/sec: 0.00\
+\
+Sample Output: d28549e49cfeb553e8a2f4b9cb421e4d\
+### CTR
 
 # Kalyna
-Device: cpu\
-Cipher: kalyna\
-Variant: Kalyna-128/128 (current repo core)\
-Mode: ecb\
-Blocks(N): 100000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-27 6e 17 81 7e 33 7f d3 f5 73 96 4e 35 fd b7 fe 
-
+## CPU Parallel
+### ECB
+First block ciphertext:\
+40 37 21 3c ad fe 6a a7 87 6b 61 51 be 21 8c 80 \
+\
 ===== PERFORMANCE =====\
-Total Time: 270529.677 ms\
-Kernel Time: 270529.677 ms\
+Total Time: 283615.897 ms\
+Kernel Time: 283615.897 ms\
 H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
+D2H Time: 0.000 ms\
+\
 Throughput:\
-Blocks/sec: 369645.21\
-GB/sec: 0.01
-
----
-Device: cpu\
-Cipher: kalyna\
-Variant: Kalyna-128/128 (current repo core)\
-Mode: ecb\
-Blocks(N): 10000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-27 6e 17 81 7e 33 7f d3 f5 73 96 4e 35 fd b7 fe 
-
-===== PERFORMANCE =====\
-Total Time: 27839.537 ms\
-Kernel Time: 27839.537 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 359201.37\
-GB/sec: 0.01
-
----
-Device: cpu\
-Cipher: kalyna\
-Variant: Kalyna-128/128 (current repo core)\
-Mode: ecb\
-Blocks(N): 100000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-27 6e 17 81 7e 33 7f d3 f5 73 96 4e 35 fd b7 fe 
-
-===== PERFORMANCE =====\
-Total Time: 228.754 ms\
-Kernel Time: 228.754 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 437150.45\
-GB/sec: 0.01
-
----
-Device: cpu\
-Cipher: kalyna\
-Variant: Kalyna-128/128 (current repo core)\
-Mode: ctr\
-Blocks(N): 100000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-14 b0 8a 14 a8 18 ed 63 ac c7 8a 55 f3 33 21 57 
-
-===== PERFORMANCE =====\
-Total Time: 264346.841 ms\
-Kernel Time: 264346.841 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 378290.88\
-GB/sec: 0.01
-
----
-Device: cpu\
-Cipher: kalyna\
-Variant: Kalyna-128/128 (current repo core)\
-Mode: ctr\
-Blocks(N): 10000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-14 b0 8a 14 a8 18 ed 63 ac c7 8a 55 f3 33 21 57 
-
-===== PERFORMANCE =====\
-Total Time: 25812.204 ms\
-Kernel Time: 25812.204 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 387413.64\
-GB/sec: 0.01
-
----
-Device: cpu\
-Cipher: kalyna\
-Variant: Kalyna-128/128 (current repo core)\
-Mode: ctr\
-Blocks(N): 100000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-14 b0 8a 14 a8 18 ed 63 ac c7 8a 55 f3 33 21 57 
-
-===== PERFORMANCE =====\
-Total Time: 223.292 ms\
-Kernel Time: 223.292 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 447844.66\
+Blocks/sec: 369716.93\
 GB/sec: 0.01\
+\
+Sample Output: 4037213cadfe6aa7876b6151be218c80\
+### CTR
 
----
+# Salsa
+## CPU Parallel
+### ECB
+First block ciphertext:\
+df b3 ec cb 1e 2c d7 1c 25 27 c5 8e 8f 70 60 2d \
+\
+===== PERFORMANCE =====\
+Total Time: 33770.714 ms\
+Kernel Time: 33770.714 ms\
+H2D Time: 0.000 ms\
+D2H Time: 0.000 ms\
+\
+Throughput:\
+Blocks/sec: 3104986.18\
+GB/sec: 0.05\
+\
+Sample Output: dfb3eccb1e2cd71c2527c58e8f70602d\
+### CTR
 
 # SIMON
-Device: cpu\
-Cipher: simon\
-Variant: SIMON-128/128 (current repo core)\
-Mode: ecb\
-Blocks(N): 100000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-a1 cc c4 1e 4c c3 5c dc ad 66 65 7a b5 6e 87 bf 
-
+## CPU Parallel
+### ECB
+First block ciphertext:\
+81 66 43 48 77 66 a8 4e 10 88 cb 5e fc 41 e0 cc \
+\
 ===== PERFORMANCE =====\
-Total Time: 21577.163 ms\
-Kernel Time: 21577.163 ms\
+Total Time: 42343.639 ms\
+Kernel Time: 42343.639 ms\
 H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
+D2H Time: 0.000 ms\
+\
 Throughput:\
-Blocks/sec: 4634529.54\
-GB/sec: 0.07
+Blocks/sec: 2476348.34\
+GB/sec: 0.04\
+\
+Sample Output: 816643487766a84e1088cb5efc41e0cc\
 
----
-Device: cpu\
-Cipher: simon\
-Variant: SIMON-128/128 (current repo core)\
-Mode: ecb\
-Blocks(N): 10000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-a1 cc c4 1e 4c c3 5c dc ad 66 65 7a b5 6e 87 bf 
-
-===== PERFORMANCE =====\
-Total Time: 2074.272 ms\
-Kernel Time: 2074.272 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 4820969.42\
-GB/sec: 0.07
-
----
-Device: cpu\
-Cipher: simon\
-Variant: SIMON-128/128 (current repo core)\
-Mode: ecb\
-Blocks(N): 100000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-a1 cc c4 1e 4c c3 5c dc ad 66 65 7a b5 6e 87 bf 
-
-===== PERFORMANCE =====\
-Total Time: 19.769 ms\
-Kernel Time: 19.769 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 5058309.66\
-GB/sec: 0.08
-
----
-Device: cpu\
-Cipher: simon\
-Variant: SIMON-128/128 (current repo core)\
-Mode: ctr\
-Blocks(N): 100000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-b8 0b 1b 62 39 5c 81 e4 39 8a b1 55 86 ab 7a 3b 
-
-===== PERFORMANCE =====\
-Total Time: 18232.924 ms\
-Kernel Time: 18232.924 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 5484583.95\
-GB/sec: 0.08
-
----
-Device: cpu\
-Cipher: simon\
-Variant: SIMON-128/128 (current repo core)\
-Mode: ctr\
-Blocks(N): 10000000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-b8 0b 1b 62 39 5c 81 e4 39 8a b1 55 86 ab 7a 3b 
-
-===== PERFORMANCE =====\
-Total Time: 1749.026 ms\
-Kernel Time: 1749.026 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 5717468.68\
-GB/sec: 0.09
-
----
-Device: cpu\
-Cipher: simon\
-Variant: SIMON-128/128 (current repo core)\
-Mode: ctr\
-Blocks(N): 100000\
-First plaintext block:\
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
-First ciphertext block:\
-b8 0b 1b 62 39 5c 81 e4 39 8a b1 55 86 ab 7a 3b 
-
-===== PERFORMANCE =====\
-Total Time: 17.560 ms\
-Kernel Time: 17.560 ms\
-H2D Time: 0.000 ms\
-D2H Time: 0.000 ms
-
-Throughput:\
-Blocks/sec: 5694805.90\
-GB/sec: 0.08
-
----
+### CTR
