@@ -43,42 +43,12 @@ void des_free_key_boxed(void *key) {
 
 void des_encrypt_ecb_native(const uint8_t *input, uint8_t *output, void *key, size_t blocks) {
     const uint64_t des_key = *static_cast<uint64_t*>(key);
-    const size_t packed_blocks = (blocks + 1) / 2;
-    uint8_t *packed_in = static_cast<uint8_t*>(std::calloc(packed_blocks, 16));
-    uint8_t *packed_out = static_cast<uint8_t*>(std::calloc(packed_blocks, 16));
-
-    for (size_t i = 0; i < blocks; ++i) {
-        const size_t packed_index = i / 2;
-        const size_t packed_offset = packed_index * 16 + ((i % 2) * 8);
-        std::memcpy(packed_in + packed_offset, input + i * 8, 8);
-    }
-
-    des_cpu_encrypt(packed_in, packed_out, des_key, packed_blocks);
-
-    for (size_t i = 0; i < blocks; ++i) {
-        const size_t packed_index = i / 2;
-        const size_t packed_offset = packed_index * 16 + ((i % 2) * 8);
-        std::memcpy(output + i * 8, packed_out + packed_offset, 8);
-    }
-
-    std::free(packed_in);
-    std::free(packed_out);
+    des_cpu_encrypt(const_cast<uint8_t*>(input), output, des_key, blocks);
 }
 
 void des_encrypt_ctr_native(uint8_t *output, void *key, size_t blocks, uint64_t ctr) {
     const uint64_t des_key = *static_cast<uint64_t*>(key);
-    const size_t packed_blocks = (blocks + 1) / 2;
-    uint8_t *packed_out = static_cast<uint8_t*>(std::calloc(packed_blocks, 16));
-
-    des_cpu_encrypt_ctr(packed_out, des_key, packed_blocks, ctr);
-
-    for (size_t i = 0; i < blocks; ++i) {
-        const size_t packed_index = i / 2;
-        const size_t packed_offset = packed_index * 16 + ((i % 2) * 8);
-        std::memcpy(output + i * 8, packed_out + packed_offset, 8);
-    }
-
-    std::free(packed_out);
+    des_cpu_encrypt_ctr(output, des_key, blocks, ctr);
 }
 
 void* kalyna_get_key_void() {

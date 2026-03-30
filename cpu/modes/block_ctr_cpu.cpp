@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-int run_cpu_block_ctr(const CpuBlockCipherApi &cipher, size_t blocks) {
+int run_cpu_block_ctr(onst CpuBlockCipherApi &cipher, size_t blocksc) {
     if (!cipher.supports_ctr || cipher.encrypt_ctr_keystream == nullptr) {
         std::fprintf(stderr, "%s does not support CTR in the current CPU implementation\n",
                      cipher.descriptor.name);

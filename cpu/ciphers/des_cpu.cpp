@@ -6,7 +6,6 @@
 
 namespace {
 
-constexpr size_t FRAMEWORK_BLOCK_SIZE = 16;
 constexpr size_t DES_BLOCK_SIZE = 8;
 constexpr int DES_ROUNDS = 16;
 
@@ -200,12 +199,9 @@ void des_cpu_encrypt(uint8_t *input, uint8_t *output, uint64_t key, size_t block
 
     #pragma omp parallel for
     for (long long block = 0; block < static_cast<long long>(blocks); ++block) {
-        const size_t offset = static_cast<size_t>(block) * FRAMEWORK_BLOCK_SIZE;
-        const uint64_t left = load_be64(input + offset);
-        const uint64_t right = load_be64(input + offset + DES_BLOCK_SIZE);
-
-        store_be64(output + offset, des_encrypt_block(left, round_keys));
-        store_be64(output + offset + DES_BLOCK_SIZE, des_encrypt_block(right, round_keys));
+        const size_t offset = static_cast<size_t>(block) * DES_BLOCK_SIZE;
+        const uint64_t value = load_be64(input + offset);
+        store_be64(output + offset, des_encrypt_block(value, round_keys));
     }
 }
 
@@ -215,12 +211,8 @@ void des_cpu_encrypt_ctr(uint8_t *output, uint64_t key, size_t blocks, uint64_t 
 
     #pragma omp parallel for
     for (long long block = 0; block < static_cast<long long>(blocks); ++block) {
-        const uint64_t counter0 = ctr + (static_cast<uint64_t>(block) * 2ULL);
-        const uint64_t counter1 = counter0 + 1ULL;
-        const size_t offset = static_cast<size_t>(block) * FRAMEWORK_BLOCK_SIZE;
-
-        store_be64(output + offset, des_encrypt_block(counter0, round_keys));
-        store_be64(output + offset + DES_BLOCK_SIZE, des_encrypt_block(counter1, round_keys));
+        const size_t offset = static_cast<size_t>(block) * DES_BLOCK_SIZE;
+        store_be64(output + offset, des_encrypt_block(ctr + static_cast<uint64_t>(block), round_keys));
     }
 }
 
