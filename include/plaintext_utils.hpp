@@ -4,14 +4,14 @@
 #include <cstdint>
 #include <cstdio>
 
-inline constexpr uint64_t DEFAULT_PLAINTEXT_SEED = 0x1234ABCDEF567890ULL;
+inline constexpr uint64_t DEFAULT_PLAINTEXT_SEED = 1;
 
 inline uint64_t plaintext_next_u64(uint64_t &state) {
-    // SplitMix64 gives deterministic, portable pseudo-random bytes from a fixed seed.
-    state += 0x9E3779B97F4A7C15ULL;
+    // Lightweight deterministic mixing with smaller constants for easy editing.
+    state += 0x9E37ULL;
     uint64_t z = state;
-    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-    z = (z ^ (z >> 27)) * 0x94D049BB133110x1234ABCDEF567890ULL1EBULL;
+    z = (z ^ (z >> 30)) * 0xBF58ULL;
+    z = (z ^ (z >> 27)) * 0x94D0ULL;
     return z ^ (z >> 31);
 }
 
