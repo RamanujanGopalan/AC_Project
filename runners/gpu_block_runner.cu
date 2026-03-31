@@ -1,12 +1,8 @@
-<<<<<<< HEAD
-
-=======
 #include "../gpu/ciphers/aes128_gpu.cuh"
 #include "../gpu/ciphers/des_gpu.cuh"
 #include "../gpu/ciphers/gift64_gpu.cuh"
 #include "../gpu/ciphers/kalyna128_128_gpu.cuh"
 #include "../gpu/ciphers/simon64_128_gpu.cuh"
->>>>>>> cb2958b (corrected gpu ciphers)
 #include "../gpu/modes/block_ctr_gpu.cuh"
 #include "../gpu/modes/block_ecb_gpu.cuh"
 
@@ -27,7 +23,7 @@ void print_usage(const char *program) {
     std::printf("Modes: ecb, ctr\n");
 }
 
-} // namespace
+}// namespace
 
 int main(int argc, char **argv) {
     if (argc != 4) {
@@ -39,11 +35,9 @@ int main(int argc, char **argv) {
     const std::string mode = argv[2];
     const size_t blocks = static_cast<size_t>(std::strtoull(argv[3], nullptr, 10));
 
-<<<<<<< HEAD
     const GpuBlockCipherApi *cipher = get_gpu_block_cipher(cipher_name.c_str());
     if (cipher == nullptr) {
         std::fprintf(stderr, "unsupported gpu block cipher: %s\n", cipher_name.c_str());
-=======
     if (cipher == "aes") {
         if (mode == "ecb") {
             return run_gpu_block_ecb_mode(aes128_gpu::descriptor, blocks, aes128_gpu::launch_ecb);
@@ -81,10 +75,10 @@ int main(int argc, char **argv) {
         }
     } else {
         std::fprintf(stderr, "unsupported gpu block cipher: %s\n", cipher.c_str());
->>>>>>> cb2958b (corrected gpu ciphers)
         return 1;
     }
 
     std::fprintf(stderr, "unsupported mode: %s\n", mode.c_str());
     return 1;
+    }
 }
