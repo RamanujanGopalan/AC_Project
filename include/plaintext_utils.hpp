@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 
-inline constexpr uint64_t DEFAULT_PLAINTEXT_SEED = ;
+inline constexpr uint64_t DEFAULT_PLAINTEXT_SEED = 123456789;
 
 inline uint64_t plaintext_next_u64(uint64_t &state) {
     // SplitMix64 gives deterministic, portable pseudo-random bytes from a fixed seed.
