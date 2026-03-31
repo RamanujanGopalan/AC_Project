@@ -1,4 +1,5 @@
 #include "../../include/cpu_cipher_api.hpp"
+#include "../../include/output_utils.hpp"
 #include "../../include/perf_utils.hpp"
 #include "../../include/plaintext_utils.hpp"
 
@@ -6,7 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-int run_cpu_block_ctr(onst CpuBlockCipherApi &cipher, size_t blocksc) {
+int run_cpu_block_ctr(const CpuBlockCipherApi &cipher, size_t blocks) {
     if (!cipher.supports_ctr || cipher.encrypt_ctr_keystream == nullptr) {
         std::fprintf(stderr, "%s does not support CTR in the current CPU implementation\n",
                      cipher.descriptor.name);
@@ -39,6 +40,13 @@ int run_cpu_block_ctr(onst CpuBlockCipherApi &cipher, size_t blocksc) {
     print_sample_block("First plaintext block:", plain, cipher.descriptor.block_size_bytes);
     print_sample_block("First ciphertext block:", cipher_out, cipher.descriptor.block_size_bytes);
     print_perf(stats, blocks, cipher.descriptor.block_size_bytes);
+    output_utils::OutputRecorder recorder;
+    if (output_utils::open_output(recorder, "cpu_out.bin")) {
+        output_utils::append_output(recorder, cipher_out, size);
+    }
+    output_utils::finish_output(recorder, "CPU output");
+    output_utils::print_match_status();
+    output_utils::print_hash_compare_hint();
 
     cipher.free_key(key);
     std::free(plain);

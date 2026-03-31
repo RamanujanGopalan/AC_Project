@@ -2,6 +2,8 @@
 
 #include "gpu_chunk_runner.cuh"
 
+#include "../../include/output_utils.hpp"
+
 #include <cstdlib>
 #include <cstring>
 
@@ -28,9 +30,19 @@ int run_gpu_block_ctr_mode(const CipherDescriptor &descriptor, size_t blocks, ui
     GPU_CHECK(cudaEventCreate(&stop_event));
 
     PerfStats stats;
+    output_utils::OutputRecorder recorder;
     uint8_t first_plain[64] = {0};
     uint8_t first_cipher[64] = {0};
     bool first_saved = false;
+
+    if (!output_utils::open_output(recorder, "gpu_out.bin")) {
+        GPU_CHECK(cudaEventDestroy(start_event));
+        GPU_CHECK(cudaEventDestroy(stop_event));
+        GPU_CHECK(cudaFree(d_out));
+        std::free(h_plain);
+        std::free(h_out);
+        return 1;
+    }
 
     for (size_t processed = 0; processed < blocks; processed += GPU_CHUNK_BLOCKS) {
         const size_t current_blocks = (blocks - processed < GPU_CHUNK_BLOCKS) ? (blocks - processed) : GPU_CHUNK_BLOCKS;
@@ -60,6 +72,16 @@ int run_gpu_block_ctr_mode(const CipherDescriptor &descriptor, size_t blocks, ui
             std::memcpy(first_cipher, h_out, block_size);
             first_saved = true;
         }
+
+        if (!output_utils::append_output(recorder, h_out, current_bytes)) {
+            output_utils::finish_output(recorder, "GPU output");
+            GPU_CHECK(cudaEventDestroy(start_event));
+            GPU_CHECK(cudaEventDestroy(stop_event));
+            GPU_CHECK(cudaFree(d_out));
+            std::free(h_plain);
+            std::free(h_out);
+            return 1;
+        }
     }
 
     stats.total_ms = stats.h2d_ms + stats.kernel_ms + stats.d2h_ms;
@@ -72,6 +94,9 @@ int run_gpu_block_ctr_mode(const CipherDescriptor &descriptor, size_t blocks, ui
     print_sample_block("First plaintext block:", first_plain, block_size);
     print_sample_block("First ciphertext block:", first_cipher, block_size);
     print_perf(stats, blocks, block_size);
+    output_utils::finish_output(recorder, "GPU output");
+    output_utils::print_match_status();
+    output_utils::print_hash_compare_hint();
 
     GPU_CHECK(cudaEventDestroy(start_event));
     GPU_CHECK(cudaEventDestroy(stop_event));

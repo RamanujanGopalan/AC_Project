@@ -1,4 +1,5 @@
 #include "../../include/cpu_cipher_api.hpp"
+#include "../../include/output_utils.hpp"
 #include "../../include/perf_utils.hpp"
 #include "../../include/plaintext_utils.hpp"
 
@@ -32,6 +33,13 @@ int run_cpu_stream_ctr(const CpuStreamCipherApi &cipher, size_t blocks) {
     print_sample_block("First plaintext block:", plain, cipher.descriptor.block_size_bytes);
     print_sample_block("First ciphertext block:", cipher_out, cipher.descriptor.block_size_bytes);
     print_perf(stats, blocks, cipher.descriptor.block_size_bytes);
+    output_utils::OutputRecorder recorder;
+    if (output_utils::open_output(recorder, "cpu_out.bin")) {
+        output_utils::append_output(recorder, cipher_out, size);
+    }
+    output_utils::finish_output(recorder, "CPU output");
+    output_utils::print_match_status();
+    output_utils::print_hash_compare_hint();
 
     cipher.free_key(key);
     std::free(plain);
