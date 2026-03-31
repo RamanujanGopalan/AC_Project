@@ -1,7 +1,11 @@
-#include "../gpu/ciphers/des_gpu.cuh"
+
 #include "../gpu/modes/block_ctr_gpu.cuh"
 #include "../gpu/modes/block_ecb_gpu.cuh"
 
+#include "../include/cipher_descriptor.hpp"
+#include "../include/gpu_cipher_api.cuh"
+
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -27,8 +31,9 @@ int main(int argc, char **argv) {
     const std::string mode = argv[2];
     const size_t blocks = static_cast<size_t>(std::strtoull(argv[3], nullptr, 10));
 
-    if (cipher != "des") {
-        std::fprintf(stderr, "unsupported gpu block cipher: %s\n", cipher.c_str());
+    const GpuBlockCipherApi *cipher = get_gpu_block_cipher(cipher_name.c_str());
+    if (cipher == nullptr) {
+        std::fprintf(stderr, "unsupported gpu block cipher: %s\n", cipher_name.c_str());
         return 1;
     }
 
