@@ -10,7 +10,7 @@ inline void fill_plaintext_blocks(uint8_t *plain, size_t blocks, size_t block_si
         const uint64_t value = static_cast<uint64_t>(i);
 
         for (size_t j = 0; j < block_size_bytes; ++j) {
-            plain[offset + j] = static_cast<uint8_t>((value >> (8 * (j % 8))) & 0xFFU);
+            plain[offset + j] = 0;
         }
     }
 }
