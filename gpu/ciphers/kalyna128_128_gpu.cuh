@@ -2,11 +2,23 @@
 
 #include "../modes/gpu_chunk_runner.cuh"
 
+<<<<<<< HEAD
 #define BLOCK_SIZE 16
 #define ROUNDS     10
 
 // ── S-box table (host-side, for future host operations) ───────────────────────
 static uint8_t SBOX[4][256] = {
+=======
+#include <cstdint>
+
+namespace kalyna128_gpu {
+
+inline constexpr CipherDescriptor descriptor = {"kalyna", "Kalyna-128/128", 16};
+constexpr int BLOCK_SIZE = 16;
+constexpr int ROUNDS = 10;
+
+inline constexpr uint8_t h_sbox[4][256] = {
+>>>>>>> cb2958b (corrected gpu ciphers)
 {
 0xa8,0x43,0x5f,0x06,0x6b,0x75,0x6c,0x59,0x71,0xdf,0x87,0x95,0x17,0xf0,0xd8,0x09,
 0x6d,0xf3,0x1d,0xcb,0xc9,0x4d,0x2c,0xaf,0x79,0xe0,0x97,0xfd,0x6f,0x4b,0x45,0x39,
@@ -81,6 +93,7 @@ static uint8_t SBOX[4][256] = {
 }
 };
 
+<<<<<<< HEAD
 // ── device constants (private to this translation unit) ──────────────────────
 __constant__ uint8_t d_SBOX[4][256];
 __constant__ uint8_t d_kalyna_roundKeys[(ROUNDS + 1) * 16];
@@ -241,3 +254,177 @@ inline cudaError_t launch_ctr(const uint8_t *d_input,
 }
 }
 
+=======
+__device__ __constant__ uint8_t d_sbox[4][256];
+__device__ __constant__ uint8_t d_round_keys[(ROUNDS + 1) * BLOCK_SIZE];
+
+__device__ __forceinline__ uint8_t gf_mul(uint8_t a, uint8_t b) {
+    uint8_t result = 0;
+    for (int i = 0; i < 8; ++i) {
+        if ((b & 1U) != 0U) {
+            result ^= a;
+        }
+        const uint8_t hi = a & 0x80U;
+        a <<= 1;
+        if (hi != 0U) {
+            a ^= 0x1dU;
+        }
+        b >>= 1;
+    }
+    return result;
+}
+
+__device__ __forceinline__ void sub_bytes(uint8_t *state) {
+    #pragma unroll
+    for (int i = 0; i < BLOCK_SIZE; ++i) {
+        state[i] = d_sbox[i % 4][state[i]];
+    }
+}
+
+__device__ __forceinline__ void shift_rows(uint8_t *state) {
+    uint8_t temp[BLOCK_SIZE];
+    #pragma unroll
+    for (int i = 0; i < BLOCK_SIZE; ++i) {
+        temp[i] = state[i];
+    }
+    #pragma unroll
+    for (int r = 0; r < 4; ++r) {
+        #pragma unroll
+        for (int c = 0; c < 4; ++c) {
+            state[r + 4 * c] = temp[r + 4 * ((c + r) % 4)];
+        }
+    }
+}
+
+__device__ __forceinline__ void mix_columns(uint8_t *state) {
+    uint8_t temp[BLOCK_SIZE];
+    #pragma unroll
+    for (int c = 0; c < 4; ++c) {
+        const int i = 4 * c;
+        temp[i + 0] = gf_mul(2, state[i + 0]) ^ gf_mul(1, state[i + 1]) ^ gf_mul(1, state[i + 2]) ^ gf_mul(3, state[i + 3]);
+        temp[i + 1] = gf_mul(3, state[i + 0]) ^ gf_mul(2, state[i + 1]) ^ gf_mul(1, state[i + 2]) ^ gf_mul(1, state[i + 3]);
+        temp[i + 2] = gf_mul(1, state[i + 0]) ^ gf_mul(3, state[i + 1]) ^ gf_mul(2, state[i + 2]) ^ gf_mul(1, state[i + 3]);
+        temp[i + 3] = gf_mul(1, state[i + 0]) ^ gf_mul(1, state[i + 1]) ^ gf_mul(3, state[i + 2]) ^ gf_mul(2, state[i + 3]);
+    }
+    #pragma unroll
+    for (int i = 0; i < BLOCK_SIZE; ++i) {
+        state[i] = temp[i];
+    }
+}
+
+__device__ __forceinline__ void add_round_key(uint8_t *state, const uint8_t *round_key) {
+    #pragma unroll
+    for (int i = 0; i < BLOCK_SIZE; ++i) {
+        state[i] ^= round_key[i];
+    }
+}
+
+__device__ __forceinline__ void encrypt_block(uint8_t *state) {
+    add_round_key(state, d_round_keys);
+
+    for (int round = 1; round < ROUNDS; ++round) {
+        sub_bytes(state);
+        shift_rows(state);
+        mix_columns(state);
+        add_round_key(state, d_round_keys + round * BLOCK_SIZE);
+    }
+
+    sub_bytes(state);
+    shift_rows(state);
+    add_round_key(state, d_round_keys + ROUNDS * BLOCK_SIZE);
+}
+
+__global__ void ecb_kernel(const uint8_t *input, uint8_t *output, size_t blocks) {
+    const size_t stride = static_cast<size_t>(blockDim.x) * gridDim.x;
+    for (size_t idx = static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x; idx < blocks; idx += stride) {
+        uint8_t state[BLOCK_SIZE];
+        const size_t offset = idx * BLOCK_SIZE;
+
+        #pragma unroll
+        for (int i = 0; i < BLOCK_SIZE; ++i) {
+            state[i] = input[offset + i];
+        }
+
+        encrypt_block(state);
+
+        #pragma unroll
+        for (int i = 0; i < BLOCK_SIZE; ++i) {
+            output[offset + i] = state[i];
+        }
+    }
+}
+
+__global__ void ctr_kernel(uint8_t *output, size_t blocks, uint64_t ctr) {
+    const size_t stride = static_cast<size_t>(blockDim.x) * gridDim.x;
+    constexpr uint64_t nonce = 0x123456789ABCDEF0ULL;
+
+    for (size_t idx = static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x; idx < blocks; idx += stride) {
+        uint8_t state[BLOCK_SIZE];
+        const uint64_t counter = ctr + idx;
+
+        for (int b = 0; b < 8; ++b) {
+            state[b] = static_cast<uint8_t>((nonce >> (8 * (7 - b))) & 0xFFU);
+            state[8 + b] = static_cast<uint8_t>((counter >> (8 * (7 - b))) & 0xFFU);
+        }
+
+        encrypt_block(state);
+
+        const size_t offset = idx * BLOCK_SIZE;
+        #pragma unroll
+        for (int i = 0; i < BLOCK_SIZE; ++i) {
+            output[offset + i] = state[i];
+        }
+    }
+}
+
+inline void key_expansion(const uint8_t *key, uint8_t *round_keys) {
+    for (int i = 0; i < BLOCK_SIZE; ++i) {
+        round_keys[i] = key[i];
+    }
+    for (int round = 1; round <= ROUNDS; ++round) {
+        for (int i = 0; i < BLOCK_SIZE; ++i) {
+            round_keys[round * BLOCK_SIZE + i] = static_cast<uint8_t>(round_keys[(round - 1) * BLOCK_SIZE + i] ^ static_cast<uint8_t>(round + i));
+        }
+    }
+}
+
+inline cudaError_t setup_key() {
+    static constexpr uint8_t key[BLOCK_SIZE] = {
+        0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,
+        0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff
+    };
+
+    uint8_t round_keys[(ROUNDS + 1) * BLOCK_SIZE];
+    key_expansion(key, round_keys);
+
+    cudaError_t err = cudaMemcpyToSymbol(d_sbox, h_sbox, sizeof(h_sbox));
+    if (err == cudaSuccess) {
+        err = cudaMemcpyToSymbol(d_round_keys, round_keys, sizeof(round_keys));
+    }
+    return err;
+}
+
+inline cudaError_t launch_ecb(const uint8_t *d_input, uint8_t *d_output, size_t blocks) {
+    cudaError_t err = setup_key();
+    if (err != cudaSuccess) {
+        return err;
+    }
+
+    const int grid = gpu_grid_for_blocks(blocks);
+    ecb_kernel<<<grid, GPU_THREADS_PER_BLOCK>>>(d_input, d_output, blocks);
+    return cudaGetLastError();
+}
+
+inline cudaError_t launch_ctr(uint8_t *d_output, size_t blocks, uint64_t ctr) {
+    cudaError_t err = setup_key();
+    if (err != cudaSuccess) {
+        return err;
+    }
+
+    const int grid = gpu_grid_for_blocks(blocks);
+    ctr_kernel<<<grid, GPU_THREADS_PER_BLOCK>>>(d_output, blocks, ctr);
+    return cudaGetLastError();
+}
+
+} // namespace kalyna128_gpu
+>>>>>>> cb2958b (corrected gpu ciphers)
